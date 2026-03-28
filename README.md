@@ -8,3 +8,7 @@ LEFE's Meaning Is Lua Editor For Everyone
 - Downloading
 
 *If You Have Any Ideas You Are Free To Change Project Files*
+
+#For Contact
+- gbabsssdev@gmail.com
+- gbabsss(In Discord)
