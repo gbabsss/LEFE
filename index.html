@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lua Editor For Everyone</title>
+
+<style>
+body {
+    margin: 0;
+    background: #0d1117;
+    color: #c9d1d9;
+    font-family: monospace;
+}
+
+/* Layout */
+.editor-container {
+    display: flex;
+    height: 100vh;
+}
+
+/* Line numbers */
+.line-numbers {
+    background: #161b22;
+    padding: 10px 8px;
+    color: #6e7681;
+    text-align: right;
+    user-select: none;
+}
+
+/* Editor */
+.editor {
+    flex: 1;
+    padding: 10px;
+    outline: none;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* Button */
+.download-btn {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    color: #c9d1d9;
+    border: none;
+    padding: 8px 12px;
+    cursor: pointer;
+    background: transparent;
+    border-radius: 8px;
+    transition: 0.2s;
+}
+
+.download-btn:hover {
+    background: rgba(255,255,255,0.08);
+}
+
+/* === SYNTAX === */
+
+.print { color: #3fb950; }
+.string { color: #d2a8ff; }
+.paren { color: #79c0ff; }
+.keyword { color: #ff7b72; }
+.number { color: #ffa657; }
+
+</style>
+</head>
+
+<body>
+
+<button class="download-btn" onclick="downloadCode()">İndir</button>
+
+<div class="editor-container">
+    <div class="line-numbers" id="lines">1</div>
+    <div class="editor" id="editor" contenteditable="true"></div>
+</div>
+
+<script>
+const editor = document.getElementById("editor");
+const lines = document.getElementById("lines");
+
+// Cursor pozisyonu koruma
+function getCaretPosition() {
+    let sel = window.getSelection();
+    if (!sel.rangeCount) return 0;
+
+    let range = sel.getRangeAt(0);
+    let preRange = range.cloneRange();
+    preRange.selectNodeContents(editor);
+    preRange.setEnd(range.endContainer, range.endOffset);
+
+    return preRange.toString().length;
+}
+
+function setCaretPosition(pos) {
+    let selection = window.getSelection();
+    let range = document.createRange();
+    let currentPos = 0;
+
+    function traverse(node) {
+        if (node.nodeType === 3) {
+            let nextPos = currentPos + node.length;
+            if (pos <= nextPos) {
+                range.setStart(node, pos - currentPos);
+                range.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(range);
+                throw "done";
+            }
+            currentPos = nextPos;
+        } else {
+            for (let child of node.childNodes) {
+                traverse(child);
+            }
+        }
+    }
+
+    try {
+        traverse(editor);
+    } catch (e) {}
+}
+
+// Syntax highlight
+function highlightLua(text) {
+
+    text = text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+    text = text.replace(/(".*?")/g, '<span class="string">$1</span>');
+    text = text.replace(/\bprint\b/g, '<span class="print">print</span>');
+    text = text.replace(/\b\d+\b/g, '<span class="number">$&</span>');
+    text = text.replace(/[\(\)]/g, '<span class="paren">$&</span>');
+
+    const keywords = ["function","end","if","then","else","for","while","do","return","local"];
+    keywords.forEach(k => {
+        let reg = new RegExp("\\b" + k + "\\b", "g");
+        text = text.replace(reg, `<span class="keyword">${k}</span>`);
+    });
+
+    return text;
+}
+
+// Update
+function updateEditor() {
+    let pos = getCaretPosition();
+    let text = editor.innerText;
+
+    editor.innerHTML = highlightLua(text);
+
+    setCaretPosition(pos);
+    updateLines(text);
+}
+
+// Line numbers
+function updateLines(text) {
+    let count = text.split("\n").length;
+    let nums = "";
+    for (let i = 1; i <= count; i++) {
+        nums += i + "\n";
+    }
+    lines.innerText = nums;
+}
+
+// Events
+editor.addEventListener("input", updateEditor);
+
+// TAB
+editor.addEventListener("keydown", function(e) {
+    if (e.key === "Tab") {
+        e.preventDefault();
+        document.execCommand("insertText", false, "    ");
+    }
+});
+
+// Download
+function downloadCode() {
+    let text = editor.innerText;
+    let blob = new Blob([text], { type: "text/plain" });
+    let a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "code.lua";
+    a.click();
+}
+
+// Init
+editor.innerText = "";
+updateEditor();
+</script>
+
+</body>
+</html>
